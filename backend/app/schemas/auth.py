@@ -33,3 +33,12 @@ class MeResponse(BaseModel):
     email: str
     name: str
     role: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str

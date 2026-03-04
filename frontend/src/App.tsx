@@ -9,6 +9,8 @@ import { ClientLayout } from "./components/layout/ClientLayout";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { OwnerLoginPage } from "./pages/OwnerLoginPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { OwnerDashboardPage } from "./pages/owner/OwnerDashboardPage";
 import { ClientsPage } from "./pages/owner/ClientsPage";
 import { SubscriptionsPage } from "./pages/owner/SubscriptionsPage";
@@ -29,7 +31,10 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/owner-login" element={<OwnerLoginPage />} />
       <Route path="/owner/login" element={<OwnerLoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Owner routes */}
       <Route

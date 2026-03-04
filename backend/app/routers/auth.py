@@ -1,4 +1,6 @@
 import logging
+import secrets
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
@@ -9,7 +11,7 @@ from app.models.client import Client
 from app.models.login_log import LoginLog
 from app.schemas.auth import (
     OwnerLoginRequest, ClientLoginRequest, TokenResponse, RefreshRequest, MeResponse,
-    ClientRegisterRequest,
+    ClientRegisterRequest, ForgotPasswordRequest, ResetPasswordRequest,
 )
 from app.auth.jwt import create_access_token, create_refresh_token, decode_token, get_current_client
 
@@ -124,7 +126,6 @@ async def client_login(body: ClientLoginRequest, request: Request, db: Session =
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     # Success
-    import datetime
     client.failed_attempts = 0
     client.last_login = datetime.datetime.utcnow()
     client.login_count += 1
@@ -148,6 +149,48 @@ async def refresh_token(body: RefreshRequest, db: Session = Depends(get_db)):
         {"sub": payload["sub"], "email": payload.get("email", "")}, role=role
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/forgot-password")
+async def forgot_password(body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.email == body.email).first()
+    # Always return success to avoid email enumeration
+    if not client:
+        return {"message": "If your email is registered, a reset link has been generated."}
+
+    token = secrets.token_urlsafe(32)
+    client.reset_token = token
+    client.reset_token_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    db.commit()
+
+    logger.info(f"Password reset requested for: {client.email} | token: {token}")
+    return {
+        "message": "Reset link generated successfully.",
+        "reset_token": token,  # In production, send this via email instead
+    }
+
+
+@router.post("/reset-password")
+async def reset_password(body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    client = db.query(Client).filter(Client.reset_token == body.token).first()
+    if not client:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+
+    if not client.reset_token_expires or datetime.datetime.utcnow() > client.reset_token_expires:
+        raise HTTPException(status_code=400, detail="Reset token has expired")
+
+    if len(body.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    client.password_hash = pwd_context.hash(body.new_password)
+    client.reset_token = None
+    client.reset_token_expires = None
+    client.failed_attempts = 0
+    client.account_locked = False
+    db.commit()
+
+    logger.info(f"Password reset successful for: {client.email}")
+    return {"message": "Password reset successfully. You can now login with your new password."}
 
 
 @router.post("/logout")
