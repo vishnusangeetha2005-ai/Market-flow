@@ -220,7 +220,7 @@ export function AutomationPage() {
             </p>
             {settings.last_posted_date && (
               <p className="text-xs text-gray-400 mt-1">
-                Last posted: {new Date(settings.last_posted_date as string).toLocaleDateString()}
+                Last posted: {new Date(String(settings.last_posted_date)).toLocaleDateString()}
               </p>
             )}
           </div>
