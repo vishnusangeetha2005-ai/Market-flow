@@ -218,7 +218,7 @@ export function AutomationPage() {
                 ? `${mode === "basic" ? "Basic" : "AI"} mode — posting daily at ${postTime} IST`
                 : "Turn on to start auto-posting"}
             </p>
-            {settings.last_posted_date && (
+            {!!settings.last_posted_date && (
               <p className="text-xs text-gray-400 mt-1">
                 Last posted: {new Date(String(settings.last_posted_date)).toLocaleDateString()}
               </p>
