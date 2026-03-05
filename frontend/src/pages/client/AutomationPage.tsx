@@ -375,6 +375,18 @@ export function AutomationPage() {
 
       {/* ── PRO PLAN UI ── */}
       {mode === "auto" && (
+        <>
+        {/* AI info highlight card */}
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-5 flex items-start gap-4">
+          <span className="text-2xl mt-0.5">🤖</span>
+          <div>
+            <p className="text-purple-700 font-semibold text-sm">AI-Powered Auto Posting</p>
+            <p className="text-gray-600 text-sm mt-1">
+              AI automatically picks a banner and generates a hook daily at your set time — no manual effort needed.
+            </p>
+          </div>
+        </div>
+
         <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <h3 className="text-gray-900 font-medium mb-3">How it works</h3>
           <div className="space-y-2">
@@ -390,6 +402,7 @@ export function AutomationPage() {
             ))}
           </div>
         </div>
+        </>
       )}
 
       {/* Schedule settings */}

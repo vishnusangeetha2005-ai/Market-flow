@@ -40,6 +40,12 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE automation_settings "
             "ADD COLUMN IF NOT EXISTS content_rotation_index INTEGER DEFAULT 0"
         ))
+        conn.execute(text(
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS website VARCHAR(255)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)"
+        ))
         conn.commit()
 
     # Seed initial data
@@ -109,3 +115,8 @@ app.mount("/static/banners", StaticFiles(directory=_banners_dir), name="banners"
 _templates_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "generated", "templates"))
 os.makedirs(_templates_dir, exist_ok=True)
 app.mount("/static/templates", StaticFiles(directory=_templates_dir), name="templates")
+
+# Serve client logos
+_logos_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "generated", "logos"))
+os.makedirs(_logos_dir, exist_ok=True)
+app.mount("/static/logos", StaticFiles(directory=_logos_dir), name="logos")

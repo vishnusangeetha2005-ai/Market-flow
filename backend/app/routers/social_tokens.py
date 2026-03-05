@@ -12,7 +12,7 @@ from app.models.client_social_token import ClientSocialToken
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/social-tokens", tags=["social-tokens"])
 
-PLATFORMS = {"facebook", "instagram", "linkedin"}
+PLATFORMS = {"facebook", "instagram", "linkedin", "google"}
 
 
 class SocialTokenSave(BaseModel):

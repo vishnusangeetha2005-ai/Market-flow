@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.auth.jwt import get_current_owner
+from app.auth.jwt import get_current_owner, get_current_client
 from app.models.banner_template import BannerTemplate
 from app.schemas.banner import BannerTemplateResponse
 
@@ -13,6 +13,14 @@ router = APIRouter(prefix="/banner-templates", tags=["banner-templates"])
 
 _BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "generated", "templates"))
 os.makedirs(_BASE, exist_ok=True)
+
+
+@router.get("/public", response_model=list[BannerTemplateResponse])
+async def list_templates_public(
+    db: Session = Depends(get_db),
+    _: dict = Depends(get_current_client),
+):
+    return db.query(BannerTemplate).filter(BannerTemplate.is_active == True).order_by(BannerTemplate.id).all()
 
 
 @router.get("", response_model=list[BannerTemplateResponse])

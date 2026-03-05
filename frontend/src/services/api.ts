@@ -101,6 +101,21 @@ export const clients = {
       body: JSON.stringify({ new_password: password }),
     }),
   activity: (id: number) => request(`/clients/${id}/activity`),
+  // Owner-managed social tokens per client
+  getSocialTokens: (id: number) => request<{
+    id: number; platform: string; account_name: string;
+    access_token_preview: string; page_id: string | null;
+    is_active: boolean; updated_at: string;
+  }[]>(`/clients/${id}/social-tokens`),
+  saveSocialToken: (id: number, data: {
+    platform: string; account_name: string; access_token: string; page_id?: string;
+  }) => request<{
+    id: number; platform: string; account_name: string;
+    access_token_preview: string; page_id: string | null;
+    is_active: boolean; updated_at: string;
+  }>(`/clients/${id}/social-tokens`, { method: "POST", body: JSON.stringify(data) }),
+  deleteSocialToken: (id: number, platform: string) =>
+    request(`/clients/${id}/social-tokens/${platform}`, { method: "DELETE" }),
 };
 
 // Plans
@@ -149,14 +164,35 @@ export const generate = {
 
 // Client Profile
 export const profile = {
-  get: () => request<{ id: number; name: string; email: string; company_name: string | null; phone: string | null; address: string | null }>("/profile"),
-  update: (data: { company_name?: string; phone?: string; address?: string }) =>
+  get: () => request<{
+    id: number; name: string; email: string;
+    company_name: string | null; phone: string | null;
+    address: string | null; website: string | null; logo_url: string | null;
+  }>("/profile"),
+  update: (data: { company_name?: string; phone?: string; address?: string; website?: string }) =>
     request("/profile", { method: "PUT", body: JSON.stringify(data) }),
+  uploadLogo: (file: File): Promise<{ logo_url: string }> => {
+    const form = new FormData();
+    form.append("logo", file);
+    const token = localStorage.getItem("access_token");
+    return fetch(`${API_V1}/profile/logo`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: "Upload failed" }));
+        throw new Error(err.detail || "Upload failed");
+      }
+      return res.json();
+    });
+  },
 };
 
 // Banner Templates (Owner)
 export const bannerTemplates = {
   list: () => request<import("../types").BannerTemplate[]>("/banner-templates"),
+  listPublic: () => request<import("../types").BannerTemplate[]>("/banner-templates/public"),
   create: (data: object) =>
     request<import("../types").BannerTemplate>("/banner-templates", {
       method: "POST",

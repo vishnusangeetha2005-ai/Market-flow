@@ -1,5 +1,8 @@
 import logging
+import datetime
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from app.database import get_db
@@ -8,9 +11,12 @@ from app.models.client import Client
 from app.models.subscription import Subscription
 from app.models.plan import Plan
 from app.models.login_log import LoginLog
+from app.models.client_social_token import ClientSocialToken
 from app.schemas.client import (
     ClientCreate, ClientUpdate, ClientResetPassword, ClientResponse, ClientListResponse
 )
+
+_PLATFORMS = {"facebook", "instagram", "linkedin", "google"}
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/clients", tags=["clients"])
@@ -228,3 +234,127 @@ async def get_client_activity(
         "total_posts": len(client.posts),
         "login_count": client.login_count,
     }
+
+
+# ── Owner-managed social tokens per client ────────────────────────────────────
+
+class OwnerSocialTokenSave(BaseModel):
+    platform: str
+    account_name: str
+    access_token: str
+    page_id: Optional[str] = None
+
+
+class OwnerSocialTokenResponse(BaseModel):
+    id: int
+    platform: str
+    account_name: str
+    access_token_preview: str
+    page_id: Optional[str]
+    is_active: bool
+    updated_at: datetime.datetime
+
+    class Config:
+        from_attributes = True
+
+
+def _token_to_response(t: ClientSocialToken) -> OwnerSocialTokenResponse:
+    preview = ("*" * 6 + t.access_token[-6:]) if len(t.access_token) > 6 else "****"
+    return OwnerSocialTokenResponse(
+        id=t.id,
+        platform=t.platform,
+        account_name=t.account_name,
+        access_token_preview=preview,
+        page_id=t.page_id,
+        is_active=t.is_active,
+        updated_at=t.updated_at,
+    )
+
+
+@router.get("/{client_id}/social-tokens", response_model=list[OwnerSocialTokenResponse])
+async def owner_list_social_tokens(
+    client_id: int,
+    db: Session = Depends(get_db),
+    _: dict = Depends(get_current_owner),
+):
+    """Owner: list all social tokens connected for a client."""
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    tokens = (
+        db.query(ClientSocialToken)
+        .filter(ClientSocialToken.client_id == client_id)
+        .all()
+    )
+    return [_token_to_response(t) for t in tokens]
+
+
+@router.post("/{client_id}/social-tokens", response_model=OwnerSocialTokenResponse)
+async def owner_save_social_token(
+    client_id: int,
+    body: OwnerSocialTokenSave,
+    db: Session = Depends(get_db),
+    _: dict = Depends(get_current_owner),
+):
+    """Owner: connect or update a social account for a client."""
+    client = db.query(Client).filter(Client.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    if body.platform not in _PLATFORMS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Platform must be one of: {', '.join(sorted(_PLATFORMS))}"
+        )
+
+    # Upsert — one token per platform per client
+    token = (
+        db.query(ClientSocialToken)
+        .filter(
+            ClientSocialToken.client_id == client_id,
+            ClientSocialToken.platform == body.platform,
+        )
+        .first()
+    )
+    now = datetime.datetime.utcnow()
+    if token:
+        token.account_name = body.account_name
+        token.access_token = body.access_token
+        token.page_id = body.page_id
+        token.is_active = True
+        token.updated_at = now
+    else:
+        token = ClientSocialToken(
+            client_id=client_id,
+            platform=body.platform,
+            account_name=body.account_name,
+            access_token=body.access_token,
+            page_id=body.page_id,
+        )
+        db.add(token)
+
+    db.commit()
+    db.refresh(token)
+    logger.info("Owner saved %s token for client %s", body.platform, client_id)
+    return _token_to_response(token)
+
+
+@router.delete("/{client_id}/social-tokens/{platform}", status_code=status.HTTP_204_NO_CONTENT)
+async def owner_delete_social_token(
+    client_id: int,
+    platform: str,
+    db: Session = Depends(get_db),
+    _: dict = Depends(get_current_owner),
+):
+    """Owner: remove a social token for a client."""
+    token = (
+        db.query(ClientSocialToken)
+        .filter(
+            ClientSocialToken.client_id == client_id,
+            ClientSocialToken.platform == platform,
+        )
+        .first()
+    )
+    if not token:
+        raise HTTPException(status_code=404, detail="Token not found")
+    db.delete(token)
+    db.commit()
