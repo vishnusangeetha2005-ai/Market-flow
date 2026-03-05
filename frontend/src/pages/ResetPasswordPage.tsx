@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { api } from "../services/api";
+import { auth } from "../services/api";
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -28,11 +28,11 @@ export function ResetPasswordPage() {
 
     setLoading(true);
     try {
-      await api.post("/auth/reset-password", { token, new_password: newPassword });
+      await auth.resetPassword(token, newPassword);
       setSuccess(true);
       setTimeout(() => navigate("/login"), 3000);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      const msg = err instanceof Error ? err.message : "Invalid or expired token.";
       setError(msg || "Invalid or expired token. Please request a new reset link.");
     } finally {
       setLoading(false);

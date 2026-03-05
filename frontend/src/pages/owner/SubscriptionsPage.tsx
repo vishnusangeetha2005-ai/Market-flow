@@ -84,9 +84,9 @@ export function SubscriptionsPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2.5">
                       <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                        {sub.client_name[0]?.toUpperCase()}
+                        {(sub.client_name ?? "?")[0]?.toUpperCase()}
                       </div>
-                      <span className="text-sm font-medium text-gray-900">{sub.client_name}</span>
+                      <span className="text-sm font-medium text-gray-900">{sub.client_name ?? "Unknown"}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
