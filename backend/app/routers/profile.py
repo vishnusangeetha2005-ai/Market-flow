@@ -1,7 +1,8 @@
 import logging
 import os
 import uuid
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -82,11 +83,18 @@ async def upload_logo(
     file_path = os.path.join(LOGOS_DIR, filename)
 
     content = await logo.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    client.logo_url = f"/static/logos/{filename}"
+    client.logo_data = content
+    client.logo_url = f"/api/v1/profile/logo-image"
     db.commit()
     db.refresh(client)
-    logger.info("Logo uploaded for client %s: %s", client.id, filename)
+    logger.info("Logo uploaded for client %s", client.id)
     return client
+
+
+@router.get("/logo-image")
+async def get_logo_image(
+    client: Client = Depends(get_current_client),
+):
+    if not client.logo_data:
+        raise HTTPException(status_code=404, detail="No logo uploaded")
+    return Response(content=client.logo_data, media_type="image/png")

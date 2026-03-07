@@ -3,6 +3,7 @@ import os
 import uuid
 import shutil
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth.jwt import get_current_client
@@ -10,7 +11,7 @@ from app.models.client import Client
 from app.models.banner import Banner
 from app.models.banner_template import BannerTemplate
 from app.schemas.banner import BannerGenerateRequest, BannerResponse, BannerTemplateResponse
-from app.services.image_service import generate_banner
+from app.services.image_service import generate_banner, generate_banner_bytes, build_client_data
 
 _BASE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 BANNERS_DIR = os.path.join(_BASE, "generated", "banners")
@@ -59,24 +60,30 @@ async def generate_banner_endpoint(
             detail=f"Missing field values: {', '.join(missing)}",
         )
 
-    # Generate PNG with Pillow
-    filename = generate_banner(
+    # Generate PNG bytes with Pillow
+    client_data = build_client_data(client)
+    image_bytes = generate_banner_bytes(
         width=template.width,
         height=template.height,
         background_color=template.background_color,
         fields=template.fields or [],
         field_values=body.field_values,
         background_image_path=None,
+        client_data=client_data,
+        logo_bytes=client.logo_data,
     )
-    result_url = f"/static/banners/{filename}"
 
     banner = Banner(
         client_id=client.id,
         template_id=body.template_id,
         field_values=body.field_values,
-        result_url=result_url,
+        result_url="",
+        image_data=image_bytes,
     )
     db.add(banner)
+    db.commit()
+    db.refresh(banner)
+    banner.result_url = f"/api/v1/banners/{banner.id}/image"
     db.commit()
     db.refresh(banner)
     return banner
@@ -116,25 +123,32 @@ async def upload_banner(
     if image.content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Only image files are allowed (jpg, png, gif, webp)")
 
-    # Save to banners directory
-    ext = (image.filename or "upload.png").rsplit(".", 1)[-1].lower()
-    filename = f"{uuid.uuid4()}.{ext}"
-    os.makedirs(BANNERS_DIR, exist_ok=True)
-    dest = os.path.join(BANNERS_DIR, filename)
-    with open(dest, "wb") as f:
-        shutil.copyfileobj(image.file, f)
-
-    result_url = f"/static/banners/{filename}"
+    image_bytes = await image.read()
     banner = Banner(
         client_id=client.id,
         template_id=None,
         field_values=None,
-        result_url=result_url,
+        result_url="",
+        image_data=image_bytes,
     )
     db.add(banner)
     db.commit()
     db.refresh(banner)
+    banner.result_url = f"/api/v1/banners/{banner.id}/image"
+    db.commit()
+    db.refresh(banner)
     return banner
+
+
+@router.get("/{banner_id}/image")
+async def get_banner_image(
+    banner_id: int,
+    db: Session = Depends(get_db),
+):
+    banner = db.query(Banner).filter(Banner.id == banner_id).first()
+    if not banner or not banner.image_data:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return Response(content=banner.image_data, media_type="image/png")
 
 
 @router.delete("/{banner_id}", status_code=204)

@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Integer, String, DateTime, ForeignKey
+from sqlalchemy import Integer, String, DateTime, ForeignKey, LargeBinary
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from app.models.base import Base
@@ -16,6 +16,7 @@ class Banner(Base):
     # Values the client entered for each field: {"headline": "50% OFF", "subtext": "Shop now"}
     field_values: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     result_url: Mapped[str] = mapped_column(String(500), nullable=False)
+    image_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime, default=datetime.datetime.utcnow
     )

@@ -258,3 +258,110 @@ def generate_banner(
     img.save(out_path, "PNG", optimize=True)
     logger.info("Banner saved: %s", out_path)
     return filename
+
+
+def generate_banner_bytes(
+    width: int,
+    height: int,
+    background_color: str,
+    fields: list[dict],
+    field_values: dict[str, str],
+    background_image_path: Optional[str] = None,
+    variation: Optional[dict] = None,
+    client_data: Optional[dict[str, str]] = None,
+    logo_bytes: Optional[bytes] = None,
+) -> bytes:
+    """Same as generate_banner but returns PNG bytes instead of saving to file."""
+    import io as _io
+
+    if client_data is None:
+        client_data = {}
+
+    effective_bg = background_color
+    spacing_offset = 0
+    text_align_override = None
+    font_weight_override = None
+
+    if variation:
+        if variation.get("bg_color"):
+            effective_bg = variation["bg_color"]
+        spacing_offset = int(variation.get("spacing_offset", 0))
+        text_align_override = variation.get("text_align_override")
+        font_weight_override = variation.get("font_weight")
+
+    bg_rgb = _hex_to_rgb(effective_bg)
+    img = Image.new("RGB", (width, height), color=bg_rgb)
+
+    if background_image_path and os.path.exists(background_image_path):
+        try:
+            bg_img = Image.open(background_image_path).convert("RGB").resize((width, height))
+            img.paste(bg_img, (0, 0))
+        except Exception as exc:
+            logger.warning("Could not load background image %s: %s", background_image_path, exc)
+
+    draw = ImageDraw.Draw(img)
+
+    for field in fields:
+        field_type: str = field.get("type", "text")
+        name: str = field.get("name", "")
+        x: int = int(field.get("x", 50))
+        y: int = int(field.get("y", 50))
+
+        if field_type == "image":
+            logo_img = None
+            if logo_bytes:
+                try:
+                    logo_img = Image.open(_io.BytesIO(logo_bytes)).convert("RGBA")
+                except Exception:
+                    pass
+            if logo_img is None:
+                source: str = field.get("source", "{{logo}}")
+                logo_url = resolve_placeholders(source, client_data)
+                logo_img = _load_logo(logo_url) if logo_url else None
+            if logo_img is None:
+                continue
+            logo_w = int(field.get("width", 100))
+            logo_h = int(field.get("height", 100))
+            logo_img = logo_img.resize((logo_w, logo_h), Image.LANCZOS)
+            if logo_img.mode == "RGBA":
+                img.paste(logo_img, (x, y), logo_img)
+            else:
+                img.paste(logo_img.convert("RGB"), (x, y))
+            continue
+
+        default_value: str = field.get("default_value", "")
+        if name and name in field_values and field_values[name]:
+            text = str(field_values[name]).strip()
+        elif default_value:
+            text = resolve_placeholders(default_value, client_data)
+        else:
+            continue
+
+        if not text:
+            continue
+
+        y = y + spacing_offset
+        font_name: str = field.get("font", "")
+        font_size: int = int(field.get("font_size", 48))
+        color: str = field.get("color", "#FFFFFF")
+        max_chars: int = int(field.get("max_chars", 100))
+        align: str = text_align_override or field.get("align", "left")
+
+        if font_weight_override == "bold" and font_name and not font_name.lower().endswith("bold.ttf"):
+            bold_name = font_name.replace(".ttf", "-Bold.ttf").replace(".TTF", "-Bold.TTF")
+            bold_path = os.path.join(FONTS_DIR, bold_name)
+            if os.path.exists(bold_path):
+                font_name = bold_name
+
+        if len(text) > max_chars:
+            text = text[: max_chars - 3] + "..."
+
+        font = _load_font(font_name, font_size)
+        anchor_map = {"left": "la", "center": "ma", "right": "ra"}
+        anchor = anchor_map.get(align, "la")
+        y = max(0, min(height - font_size, y))
+        draw.text((x, y), text, fill=_hex_to_rgb(color), font=font, anchor=anchor)
+
+    buf = _io.BytesIO()
+    img.save(buf, "PNG", optimize=True)
+    return buf.getvalue()
