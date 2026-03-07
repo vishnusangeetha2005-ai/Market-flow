@@ -7,6 +7,16 @@ import { StatusBadge } from "../../components/ui/StatusBadge";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+async function getFacebookOAuthUrl(): Promise<string> {
+  const token = localStorage.getItem("access_token");
+  const res = await fetch(`${API_BASE}/api/v1/auth/facebook/connect`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to get OAuth URL");
+  const data = await res.json();
+  return data.auth_url;
+}
+
 function imgSrc(url: string | null) {
   if (!url) return "";
   return url.startsWith("/static/") ? `${API_BASE}${url}` : url;
@@ -27,6 +37,8 @@ const emptyForm = { account_name: "", access_token: "", page_id: "", open: false
 export function ProfilePage() {
   const { user } = useAuth();
   const [stats, setStats] = useState<ClientStats | null>(null);
+  const [fbSuccess, setFbSuccess] = useState("");
+  const [fbError, setFbError] = useState("");
 
   // Company details
   const [companyName, setCompanyName] = useState("");
@@ -53,6 +65,15 @@ export function ProfilePage() {
   );
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("facebook_connected")) {
+      const pageName = params.get("page_name") || "your page";
+      setFbSuccess(`✓ Facebook connected: ${pageName}`);
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("facebook_error")) {
+      setFbError(params.get("facebook_error") === "no_pages" ? "No Facebook Pages found. Please create a Facebook Page first." : "Facebook connection failed. Please try again.");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
     dashboard.clientStats().then(setStats);
     profile.get().then((p) => {
       setCompanyName(p.company_name || "");
@@ -236,6 +257,8 @@ export function ProfilePage() {
         <p className="text-gray-500 text-xs mb-5">
           Connect your accounts so the system can post banners automatically.
         </p>
+        {fbSuccess && <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-xl">{fbSuccess}</div>}
+        {fbError && <div className="mb-4 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">{fbError}</div>}
 
         <div className="space-y-4">
           {PLATFORMS.map((p) => {
@@ -262,14 +285,21 @@ export function ProfilePage() {
                         Disconnect
                       </button>
                     )}
+                    {!form.open && p.id === "facebook" && !connected && (
+                      <button
+                        onClick={async () => { try { const url = await getFacebookOAuthUrl(); window.location.href = url; } catch { setFbError("Failed to start Facebook login. Is FACEBOOK_APP_ID set?"); } }}
+                        className="text-xs px-3 py-1.5 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                        Connect with Facebook
+                      </button>
+                    )}
                     {!form.open && (
                       <button onClick={() => openForm(p.id)}
                         className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
                           connected
                             ? "text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-400"
-                            : "text-white bg-orange-500 hover:bg-orange-600"
+                            : "text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-400"
                         }`}>
-                        {connected ? "Update" : "Connect"}
+                        {connected ? "Update" : "Manual"}
                       </button>
                     )}
                     {form.saved && <span className="text-emerald-600 text-xs">✓ Saved!</span>}

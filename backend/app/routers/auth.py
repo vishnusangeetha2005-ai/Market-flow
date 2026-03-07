@@ -206,3 +206,85 @@ async def me(client=Depends(get_current_client)):
         name=client.name,
         role="client",
     )
+
+
+@router.get("/facebook/connect")
+async def facebook_connect(client: Client = Depends(get_current_client)):
+    if not settings.FACEBOOK_APP_ID:
+        raise HTTPException(status_code=400, detail="Facebook app not configured")
+    state = create_access_token({"sub": str(client.id), "type": "fb_state"}, role="client")
+    import urllib.parse
+    params = urllib.parse.urlencode({
+        "client_id": settings.FACEBOOK_APP_ID,
+        "redirect_uri": f"{settings.BACKEND_URL}/api/v1/auth/facebook/callback",
+        "scope": "pages_manage_posts,pages_read_engagement,pages_show_list",
+        "state": state,
+        "response_type": "code",
+    })
+    return {"auth_url": f"https://www.facebook.com/v18.0/dialog/oauth?{params}"}
+
+
+@router.get("/facebook/callback")
+async def facebook_callback(code: str = None, state: str = None, error: str = None, db: Session = Depends(get_db)):
+    from fastapi.responses import RedirectResponse
+    import httpx
+    frontend_url = settings.FRONTEND_URL
+
+    if error or not code or not state:
+        return RedirectResponse(f"{frontend_url}/client/profile?facebook_error=1")
+
+    try:
+        payload = decode_token(state)
+        if payload.get("type") != "fb_state":
+            raise ValueError("Invalid state")
+        client_id = int(payload["sub"])
+
+        async with httpx.AsyncClient() as http:
+            token_res = await http.get(
+                "https://graph.facebook.com/v18.0/oauth/access_token",
+                params={
+                    "client_id": settings.FACEBOOK_APP_ID,
+                    "client_secret": settings.FACEBOOK_APP_SECRET,
+                    "redirect_uri": f"{settings.BACKEND_URL}/api/v1/auth/facebook/callback",
+                    "code": code,
+                }
+            )
+            token_data = token_res.json()
+            user_token = token_data.get("access_token")
+            if not user_token:
+                raise ValueError("No access token")
+
+            pages_res = await http.get(
+                "https://graph.facebook.com/v18.0/me/accounts",
+                params={"access_token": user_token, "fields": "id,name,access_token"}
+            )
+            pages = pages_res.json().get("data", [])
+            if not pages:
+                return RedirectResponse(f"{frontend_url}/client/profile?facebook_error=no_pages")
+
+            page = pages[0]
+
+        from app.models.client_social_token import ClientSocialToken
+        existing = db.query(ClientSocialToken).filter(
+            ClientSocialToken.client_id == client_id,
+            ClientSocialToken.platform == "facebook"
+        ).first()
+        if existing:
+            existing.access_token = page["access_token"]
+            existing.page_id = page["id"]
+            existing.account_name = page["name"]
+        else:
+            db.add(ClientSocialToken(
+                client_id=client_id,
+                platform="facebook",
+                access_token=page["access_token"],
+                page_id=page["id"],
+                account_name=page["name"],
+            ))
+        db.commit()
+
+        import urllib.parse
+        return RedirectResponse(f"{frontend_url}/client/profile?facebook_connected=1&page_name={urllib.parse.quote(page['name'])}")
+    except Exception as e:
+        logger.error(f"Facebook OAuth error: {e}")
+        return RedirectResponse(f"{frontend_url}/client/profile?facebook_error=1")
