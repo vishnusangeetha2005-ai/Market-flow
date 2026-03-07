@@ -7,7 +7,7 @@ const navItems = [
   { path: "/owner/dashboard", label: "Dashboard", icon: "📊" },
   { path: "/owner/clients", label: "Clients", icon: "👥" },
   { path: "/owner/subscriptions", label: "Subscriptions", icon: "💳" },
-  { path: "/owner/banner-templates", label: "Banner Templates", icon: "🎨" },
+  { path: "/owner/banner-templates", label: "Banners", icon: "🎨" },
   { path: "/owner/social-monitor", label: "Social Monitor", icon: "📱" },
   { path: "/owner/settings", label: "Settings", icon: "⚙️" },
 ];

@@ -120,7 +120,7 @@ export function BannerTemplatesPage() {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Banner Templates</h1>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Banners</h1>
             {!loading && templates.length > 0 && (
               <span className="text-xs px-2.5 py-1 rounded-full bg-orange-50 text-orange-600
                                font-semibold border border-orange-100">
@@ -129,7 +129,7 @@ export function BannerTemplatesPage() {
             )}
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            Upload banner images that your clients can browse and download
+            Upload banner images for your clients
           </p>
         </div>
         <button
@@ -139,7 +139,7 @@ export function BannerTemplatesPage() {
                      text-sm font-semibold rounded-xl shadow-sm
                      transition-all duration-150 hover:shadow-lg hover:shadow-orange-600/20"
         >
-          + Add Template
+          + Add Banner
         </button>
       </div>
 
@@ -156,7 +156,7 @@ export function BannerTemplatesPage() {
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No templates yet</h3>
           <p className="text-sm text-gray-400 max-w-xs mx-auto mb-6">
-            Upload your first banner template. Clients will see and download them from their portal.
+            Upload your first banner. Clients will see and download them from their portal.
           </p>
           <button
             onClick={openForm}
@@ -164,7 +164,7 @@ export function BannerTemplatesPage() {
                        bg-orange-500 hover:bg-orange-600 text-white
                        text-sm font-semibold rounded-xl transition-colors duration-150"
           >
-            + Upload First Template
+            + Upload First Banner
           </button>
         </div>
       ) : (
@@ -245,7 +245,7 @@ export function BannerTemplatesPage() {
               {/* Modal header */}
               <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-gray-900">Add Banner Template</h2>
+                  <h2 className="text-base font-bold text-gray-900">Add Banner</h2>
                   <p className="text-xs text-gray-400 mt-0.5">Upload a banner image for your clients</p>
                 </div>
                 <button
@@ -367,7 +367,7 @@ export function BannerTemplatesPage() {
                         </svg>
                         Uploading…
                       </span>
-                    ) : "Add Template"}
+                    ) : "Add Banner"}
                   </button>
                 </div>
               </form>
