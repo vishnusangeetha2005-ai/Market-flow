@@ -5,7 +5,7 @@ import type { BannerTemplate } from "../../types";
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
 function authHeaders(): Record<string, string> {
-  const token = localStorage.getItem("owner_access_token");
+  const token = localStorage.getItem("access_token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
