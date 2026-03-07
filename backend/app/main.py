@@ -52,6 +52,15 @@ async def lifespan(app: FastAPI):
         conn.execute(text(
             "ALTER TABLE banners ADD COLUMN IF NOT EXISTS image_data BYTEA"
         ))
+        conn.execute(text(
+            "ALTER TABLE client_social_tokens ADD COLUMN IF NOT EXISTS page_name VARCHAR(255)"
+        ))
+        conn.execute(text(
+            "ALTER TABLE client_social_tokens ADD COLUMN IF NOT EXISTS token_expiry TIMESTAMP"
+        ))
+        conn.execute(text(
+            "ALTER TABLE client_social_tokens ADD COLUMN IF NOT EXISTS refresh_token TEXT"
+        ))
         conn.commit()
 
     # Seed initial data

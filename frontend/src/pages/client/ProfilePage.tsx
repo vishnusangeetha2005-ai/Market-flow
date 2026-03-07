@@ -7,15 +7,20 @@ import { StatusBadge } from "../../components/ui/StatusBadge";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-async function getFacebookOAuthUrl(): Promise<string> {
+async function getOAuthUrl(platform: string): Promise<string> {
   const token = localStorage.getItem("access_token");
-  const res = await fetch(`${API_BASE}/api/v1/auth/facebook/connect`, {
+  const res = await fetch(`${API_BASE}/api/v1/auth/${platform}/connect`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("Failed to get OAuth URL");
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Failed to start OAuth");
+  }
   const data = await res.json();
   return data.auth_url;
 }
+
+const OAUTH_PLATFORMS = ["facebook", "instagram", "linkedin"];
 
 function imgSrc(url: string | null) {
   if (!url) return "";
@@ -66,12 +71,16 @@ export function ProfilePage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("facebook_connected")) {
-      const pageName = params.get("page_name") || "your page";
-      setFbSuccess(`✓ Facebook connected: ${pageName}`);
+    const oauthSuccess = params.get("oauth_success");
+    const oauthError = params.get("oauth_error");
+    if (oauthSuccess) {
+      const pageName = params.get("page_name") || "your account";
+      setFbSuccess(`✓ ${oauthSuccess.charAt(0).toUpperCase() + oauthSuccess.slice(1)} connected: ${pageName}`);
       window.history.replaceState({}, "", window.location.pathname);
-    } else if (params.get("facebook_error")) {
-      setFbError(params.get("facebook_error") === "no_pages" ? "No Facebook Pages found. Please create a Facebook Page first." : "Facebook connection failed. Please try again.");
+    } else if (oauthError) {
+      const platform = oauthError.split("_")[0];
+      const reason = oauthError.includes("no_pages") ? "No pages/accounts found." : oauthError.includes("no_account") ? "No Instagram Business account linked to your Facebook Page." : "Connection failed. Please try again.";
+      setFbError(`${platform.charAt(0).toUpperCase() + platform.slice(1)}: ${reason}`);
       window.history.replaceState({}, "", window.location.pathname);
     }
     dashboard.clientStats().then(setStats);
@@ -278,11 +287,29 @@ export function ProfilePage() {
                       }
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                     {connected && !form.open && (
                       <button onClick={() => handleDisconnect(p.id)}
                         className="text-xs text-red-500 hover:text-red-600 px-3 py-1.5 rounded-lg border border-red-200 hover:border-red-300 transition-colors">
                         Disconnect
+                      </button>
+                    )}
+                    {!form.open && OAUTH_PLATFORMS.includes(p.id) && !connected && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const url = await getOAuthUrl(p.id);
+                            window.location.href = url;
+                          } catch (e: unknown) {
+                            setFbError(e instanceof Error ? e.message : "OAuth failed");
+                          }
+                        }}
+                        className={`text-xs px-3 py-1.5 rounded-lg text-white transition-colors ${
+                          p.id === "facebook" ? "bg-blue-600 hover:bg-blue-700" :
+                          p.id === "instagram" ? "bg-pink-500 hover:bg-pink-600" :
+                          "bg-sky-600 hover:bg-sky-700"
+                        }`}>
+                        Connect {p.label}
                       </button>
                     )}
                     {!form.open && (
@@ -290,9 +317,9 @@ export function ProfilePage() {
                         className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
                           connected
                             ? "text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-400"
-                            : "text-white bg-orange-500 hover:bg-orange-600"
+                            : "text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300"
                         }`}>
-                        {connected ? "Update" : "Connect"}
+                        {connected ? "Update" : "Manual"}
                       </button>
                     )}
                     {form.saved && <span className="text-emerald-600 text-xs">✓ Saved!</span>}
