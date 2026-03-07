@@ -41,7 +41,7 @@ export function ForgotPasswordPage() {
             <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg">
               <span className="text-orange-600 font-bold text-lg">M</span>
             </div>
-            <span className="text-white font-bold text-2xl tracking-tight">MarketFlow</span>
+            <span className="text-white font-bold text-2xl tracking-tight">AdSpectra</span>
           </div>
         </div>
 

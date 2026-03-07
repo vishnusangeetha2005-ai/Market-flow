@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "MarketFlow"
+    APP_NAME: str = "AdSpectra"
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/marketflow"
     SECRET_KEY: str = "change-me-in-production-min-32-chars"
     ALGORITHM: str = "HS256"

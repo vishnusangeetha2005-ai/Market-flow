@@ -32,7 +32,7 @@ export function OwnerLayout({ children }: { children: ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm">
               <span className="text-orange-600 text-sm font-bold">M</span>
             </div>
-            <span className="text-white font-bold text-lg tracking-tight">MarketFlow</span>
+            <span className="text-white font-bold text-lg tracking-tight">AdSpectra</span>
           </div>
           <p className="text-orange-200 text-xs mt-1.5 ml-[42px]">Owner Dashboard</p>
         </div>

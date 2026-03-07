@@ -55,7 +55,7 @@ export function OwnerLoginPage() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-400 flex items-center justify-center shadow-lg shadow-orange-500/30">
               <span className="text-white font-bold text-lg">M</span>
             </div>
-            <span className="text-gray-900 font-bold text-2xl tracking-tight">MarketFlow</span>
+            <span className="text-gray-900 font-bold text-2xl tracking-tight">AdSpectra</span>
           </div>
           <p className="text-gray-500 text-sm">Owner Administration Panel</p>
         </div>
