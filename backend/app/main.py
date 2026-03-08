@@ -44,6 +44,9 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE clients ADD COLUMN IF NOT EXISTS website VARCHAR(255)"
         ))
         conn.execute(text(
+            "ALTER TABLE clients ADD COLUMN IF NOT EXISTS business_type VARCHAR(255)"
+        ))
+        conn.execute(text(
             "ALTER TABLE clients ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)"
         ))
         conn.execute(text(

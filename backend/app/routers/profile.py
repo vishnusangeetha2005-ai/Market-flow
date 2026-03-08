@@ -25,6 +25,7 @@ class ProfileUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     website: Optional[str] = None
+    business_type: Optional[str] = None
 
 
 class ProfileResponse(BaseModel):
@@ -36,6 +37,7 @@ class ProfileResponse(BaseModel):
     address: Optional[str]
     website: Optional[str]
     logo_url: Optional[str]
+    business_type: Optional[str]
 
     class Config:
         from_attributes = True
@@ -62,6 +64,8 @@ async def update_profile(
         client.address = body.address.strip() or None
     if body.website is not None:
         client.website = body.website.strip() or None
+    if body.business_type is not None:
+        client.business_type = body.business_type.strip() or None
     db.commit()
     db.refresh(client)
     return client

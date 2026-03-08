@@ -391,10 +391,10 @@ export function AutomationPage() {
           <h3 className="text-gray-900 font-medium mb-3">How it works</h3>
           <div className="space-y-2">
             {[
-              { icon: "🖼️", text: "System picks next owner banner template automatically (rotating)" },
-              { icon: "✨", text: "AI generates hook + caption for that banner" },
+              { icon: "🧠", text: "AI reads your Business Type from Profile and picks the best matching banner" },
+              { icon: "✨", text: "AI generates a hook + caption tailored to your business" },
               { icon: "🏢", text: "Your company name, phone & address are added automatically" },
-              { icon: "📤", text: "Post is published to your selected platforms" },
+              { icon: "📤", text: "Post is published to your selected platforms at your set time" },
             ].map((item, i) => (
               <div key={i} className="flex items-start gap-3 text-sm text-gray-500">
                 <span>{item.icon}</span><span>{item.text}</span>

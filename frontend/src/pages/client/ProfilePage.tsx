@@ -46,12 +46,13 @@ export function ProfilePage() {
   const [fbError, setFbError] = useState("");
 
   // Company details
-  const [companyName, setCompanyName] = useState("");
-  const [phone, setPhone]             = useState("");
-  const [address, setAddress]         = useState("");
-  const [website, setWebsite]         = useState("");
-  const [saving, setSaving]           = useState(false);
-  const [saved, setSaved]             = useState(false);
+  const [companyName, setCompanyName]     = useState("");
+  const [phone, setPhone]                 = useState("");
+  const [address, setAddress]             = useState("");
+  const [website, setWebsite]             = useState("");
+  const [businessType, setBusinessType]   = useState("");
+  const [saving, setSaving]               = useState(false);
+  const [saved, setSaved]                 = useState(false);
 
   // Logo
   const [logoUrl, setLogoUrl]           = useState<string | null>(null);
@@ -89,6 +90,7 @@ export function ProfilePage() {
       setPhone(p.phone || "");
       setAddress(p.address || "");
       setWebsite(p.website || "");
+      setBusinessType(p.business_type || "");
       setLogoUrl(p.logo_url || null);
     });
     socialTokens.list().then((list) => {
@@ -102,7 +104,7 @@ export function ProfilePage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await profile.update({ company_name: companyName, phone, address, website });
+      await profile.update({ company_name: companyName, phone, address, website, business_type: businessType });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } finally {
@@ -251,6 +253,18 @@ export function ProfilePage() {
           <div>
             <label className="block text-sm text-gray-500 mb-1">Address</label>
             <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="e.g. MG Road, Chennai 600001" className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-500 mb-1">
+              Business Type
+              <span className="ml-2 text-xs text-purple-600 font-medium">✨ AI uses this to auto-select banner</span>
+            </label>
+            <input
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value)}
+              placeholder="e.g. Shoe Store, Restaurant, Salon, Real Estate"
+              className={inputCls}
+            />
           </div>
           <button type="submit" disabled={saving}
             className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">

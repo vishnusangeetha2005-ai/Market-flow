@@ -25,9 +25,6 @@ class Settings(BaseSettings):
     LINKEDIN_CLIENT_ID: str = ""
     LINKEDIN_CLIENT_SECRET: str = ""
 
-    # Backend/Frontend URLs
-    BACKEND_URL: str = "https://api.adspectra.store"
-
     # URLs
     FRONTEND_URL: str = "http://localhost:3000"
     BACKEND_URL: str = "http://localhost:8000"

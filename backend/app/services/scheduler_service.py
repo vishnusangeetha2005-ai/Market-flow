@@ -189,7 +189,7 @@ def run_automation():
                         s.client_id, item.id, current_time
                     )
 
-                # ── AUTO/PRO MODE: day-based template + AI content + unique PNG ──
+                # ── AUTO/PRO MODE: AI picks template by business type + unique PNG ──
                 else:
                     templates = (
                         db.query(BannerTemplate)
@@ -202,9 +202,17 @@ def run_automation():
                         logger.info("Auto: no banner templates for client %s, skipping", s.client_id)
                         continue
 
-                    # Day-based index: same template for all clients today
-                    idx = _day_based_template_index(today_date, len(templates))
+                    # AI picks best template based on client's business type
+                    import asyncio
+                    from app.services.openai_service import generate_hook, generate_caption, select_banner_for_business
+
+                    business_type = client.business_type or client.company_name or "general business"
+                    idx = asyncio.run(select_banner_for_business(business_type, templates))
                     template = templates[idx]
+                    logger.info(
+                        "AI selected template '%s' (idx %s) for client %s (business: %s)",
+                        template.name, idx, client.id, business_type
+                    )
 
                     # Per-client variation (unique banner per client)
                     variation = generate_client_variation(
@@ -218,7 +226,6 @@ def run_automation():
                     banner_url = None
                     try:
                         fields = template.fields or []
-                        # Build client placeholder data ({{business_name}}, {{phone_number}}, etc.)
                         client_data = build_client_data(client)
                         bg_color = variation.get("bg_color") or template.background_color
 
@@ -227,7 +234,7 @@ def run_automation():
                             height=template.height,
                             background_color=bg_color,
                             fields=fields,
-                            field_values={},  # let default_value + placeholders do the work
+                            field_values={},
                             variation=variation,
                             client_data=client_data,
                         )
@@ -238,14 +245,10 @@ def run_automation():
                         )
                     except Exception as render_err:
                         logger.error("Banner render failed for client %s: %s", client.id, render_err)
-                        # Fall back to template thumbnail
                         banner_url = template.thumbnail_url
 
-                    # Generate AI hook + caption
-                    import asyncio
-                    from app.services.openai_service import generate_hook, generate_caption
-
-                    topic = f"Digital Marketing — {client.company_name or 'your business'}"
+                    # Generate AI hook + caption tailored to business type
+                    topic = f"{business_type} — {client.company_name or 'your business'}"
                     hook, _ = asyncio.run(generate_hook(topic, platforms[0], "professional"))
                     caption, _ = asyncio.run(generate_caption(topic, platforms[0], "professional", True))
 

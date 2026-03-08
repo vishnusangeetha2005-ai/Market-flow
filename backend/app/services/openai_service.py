@@ -211,6 +211,46 @@ async def generate_caption(
     return _mock_caption(topic, platform, tone, include_cta), 80
 
 
+async def select_banner_for_business(business_type: str, templates: list) -> int:
+    """
+    AI picks the best banner template index for the given business type.
+    Returns the index of the best matching template.
+    Fallback: returns 0 (first template).
+    """
+    if not templates:
+        return 0
+
+    template_list = "\n".join(
+        f"{i}. {t.name} — {t.description or 'No description'}"
+        for i, t in enumerate(templates)
+    )
+
+    if _is_valid_key():
+        try:
+            from openai import AsyncOpenAI
+            client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            prompt = (
+                f"A business of type '{business_type}' needs to post a marketing banner today.\n"
+                f"Available banner templates:\n{template_list}\n\n"
+                f"Which template number (0-indexed) is the best fit for this business type? "
+                f"Reply with ONLY the number, nothing else."
+            )
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=5,
+            )
+            text = (response.choices[0].message.content or "0").strip()
+            idx = int(text)
+            if 0 <= idx < len(templates):
+                return idx
+        except Exception as e:
+            logger.warning("AI banner select failed, using fallback: %s", e)
+
+    # Fallback: pick based on hash of business_type for consistency
+    return hash(business_type or "default") % len(templates)
+
+
 async def generate_banner_image(prompt: str) -> str:
     if _is_valid_key():
         try:
