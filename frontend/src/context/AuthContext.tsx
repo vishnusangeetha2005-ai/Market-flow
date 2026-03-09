@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import { auth } from "../services/api";
 import type { AuthState } from "../types";
 
@@ -14,26 +14,19 @@ interface AuthContextType extends AuthState {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    role: null,
-    isAuthenticated: false,
-    accessToken: null,
-  });
-
-  useEffect(() => {
+  const [state, setState] = useState<AuthState>(() => {
     const token = localStorage.getItem("access_token");
     const role = localStorage.getItem("user_role") as "owner" | "client" | null;
     const userStr = localStorage.getItem("user_info");
     if (token && role && userStr) {
-      setState({
-        user: JSON.parse(userStr),
-        role,
-        isAuthenticated: true,
-        accessToken: token,
-      });
+      try {
+        return { isAuthenticated: true, accessToken: token, role, user: JSON.parse(userStr) };
+      } catch {
+        // corrupted storage — fall through
+      }
     }
-  }, []);
+    return { user: null, role: null, isAuthenticated: false, accessToken: null };
+  });
 
   const loginAsOwner = async (email: string, password: string) => {
     const res = await auth.ownerLogin(email, password);
