@@ -5,6 +5,26 @@ function getToken(): string | null {
   return localStorage.getItem("access_token");
 }
 
+let isRefreshing = false;
+
+async function tryRefresh(): Promise<string | null> {
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) return null;
+  try {
+    const res = await fetch(`${API_V1}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    localStorage.setItem("access_token", data.access_token);
+    return data.access_token;
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -20,7 +40,25 @@ async function request<T>(
   const res = await fetch(`${API_V1}${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    if (!skipAuthRedirect) {
+    if (!skipAuthRedirect && !isRefreshing) {
+      isRefreshing = true;
+      const newToken = await tryRefresh();
+      isRefreshing = false;
+      if (newToken) {
+        const retryRes = await fetch(`${API_V1}${path}`, {
+          ...options,
+          headers: { ...headers, Authorization: `Bearer ${newToken}` },
+        });
+        if (retryRes.ok) {
+          if (retryRes.status === 204) return undefined as T;
+          return retryRes.json();
+        }
+      }
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user_role");
+      window.location.href = "/login";
+    } else if (!skipAuthRedirect) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("user_role");

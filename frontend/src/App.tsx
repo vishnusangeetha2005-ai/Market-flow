@@ -23,12 +23,16 @@ import { BannersPage } from "./pages/client/BannersPage";
 import { SchedulePage } from "./pages/client/SchedulePage";
 import { ProfilePage } from "./pages/client/ProfilePage";
 import { AutomationPage } from "./pages/client/AutomationPage";
+import { PrivacyPolicyPage } from "./pages/PrivacyPolicyPage";
+import { DataDeletionPage } from "./pages/DataDeletionPage";
 
 function AppRoutes() {
   const { isAuthenticated, role } = useAuth();
 
   return (
     <Routes>
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/data-deletion" element={<DataDeletionPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/owner-login" element={<OwnerLoginPage />} />
